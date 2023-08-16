@@ -1,138 +1,205 @@
-import './style.css'
-import imageURL from '/sad.png'
-import dat from 'dat.gui'
-const {floor} = Math
+import type { interactiveData } from "./Classes/App"
+import { App } from "./Classes/App"
+import { Color } from "./Classes/Color";
+import { Pixel } from "./Classes/Pixel";
+import PoissonDiskSampling from "poisson-disk-sampling"
+import  imageURL from  "/sad.png"
+import "./style.css"
+import { Particle } from "./Classes/Shapes/Particle";
+import { State } from "./Classes/Controls";
+import { Vector2 } from "./Classes/Vector2";
 
-type colors = "original" | "black" | "invert"
 
-let controls = {
-  speed: 400,
-  density: 4,
-  color: "original" as colors,
-  size: 1
+interface HTMLInputEvent extends Event {
+  target: HTMLInputElement & EventTarget;
 }
 
-function getRandomInt(min: number, max:number) {
-  return Math.floor(Math.random() * (max - min) + min);
-}
+let URL = imageURL
 
-class Pixel {
-  constructor(
-    public x: number, 
-    public y: number, 
-    public r: number, 
-    public g:number,
-    public b: number, 
-    public a: number
-  ){}
-  getHSB(){
-    let r = this.r/ 255;
-    let g = this.g/ 255;
-    let b = this.b /255;
-    const v = Math.max(r, g, b),
-      n = v - Math.min(r, g, b);
-    const h =
-      n === 0 ? 0 : n && v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n;
-    return [60 * (h < 0 ? h + 6 : h), v && (n / v) * 100, v * 100];
+const appState = new State()
+let controls = appState.state
+
+// const DIMENSIONS = 2
+// const MIN_DIST = 15
+// const CELL_SIZE = MIN_DIST / Math.sqrt(DIMENSIONS)
+// const TRY_LIMITS = 20
+// const COLSCOUNT = Math.floor(window.innerWidth / CELL_SIZE)
+// const ROWSCOUNT = Math.floor(window.innerHeight / CELL_SIZE)
+// // STEP 1
+// const  grid= new Grid<Vector2 | null>(COLSCOUNT, ROWSCOUNT)
+// const active: Vector2[] = []
+
+
+// const generateRandomPoint = (colWidth: number, rowWidth: number) => {
+//   return new Vector2(
+//     generateRandomInt(0, colWidth) * MIN_DIST,
+//     generateRandomInt(0, rowWidth) * MIN_DIST
+//   )
+// }
+
+
+
+  // // STEP 2
+  // const startPoint = generateRandomPoint(COLSCOUNT, ROWSCOUNT)
+  // active.push(startPoint)
+
+  // while (active.length > 0){
+  //   const activeIndex = generateRandomInt(0, active.length -1)
+  //   const point = active[activeIndex]
+  //   let found = false
+
+  //   for(let n = 0; n < TRY_LIMITS; n++){
+  //     const newPoint = new Vector2(point.x, point.y)
+  //     newPoint.setAngle(generateRandomNumber(0, 2 * Math.PI))
+  //     newPoint.setLength(generateRandomNumber(20, 40))
+  //     newPoint.add(point)
+
+  //     const newPointCol = Math.floor(newPoint.x / CELL_SIZE)
+  //     const newPointRow = Math.floor(newPoint.y / CELL_SIZE)
+  //     if(newPointCol > 0 && newPointRow > 0 && newPointCol < COLSCOUNT && newPointRow < ROWSCOUNT && !grid.get(newPointCol, newPointRow)){
+  //       let ok = true
+  //       for(let i = -1; i<=1; i++){
+  //         for(let j = -1; j<=1; j++){
+  //           const neighbor = grid.get(newPointCol + i, newPointRow + j)
+  //           if(neighbor){
+  //             if(dist(neighbor, newPoint) < MIN_DIST){
+  //               ok  = false
+  //             }
+  //           }
+  //         }
+  //       }
+  //       if(ok){
+  //         found = true
+  //         grid.insert(newPointCol, newPointRow, newPoint)
+  //         active.push(newPoint)
+  //       }
+  //     }
+  //   }
+
+  //   if(!found){
+  //     active.splice(activeIndex, 1)
+  //   }
+  // }
+
+
+
+    // for(let i =0; i < grid.array.length; i++){
+  //   const point = grid.array[i]
+  //   if(point){
+  //     ctx.beginPath()
+  //     ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+
+  //     // ctx.fillStyle = `RGB(${generateRandomInt(0, 255)}, ${generateRandomInt(0, 255)}, ${generateRandomInt(0, 255)})`
+  //     ctx.fill()
+  //   }
+  // }
+
+
+
+
+  function getImageData(ctx:CanvasRenderingContext2D ,canvas:HTMLCanvasElement  ,url: string, callback: (data: ImageData) => void) {
+    // load an image, draw it on a canvas, retrieve the pixel values / image data
+    // see https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Pixel_manipulation_with_canvas
+    const img = new Image();
+    img.onload = function () {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      callback(ctx.getImageData(0, 0, img.width, img.height));
+    }
+    img.src = url
+    ctx.clearRect(0,0,canvas.width, canvas.height)
+  }
+
+
+let sample:Particle[] = []
+
+
+
+const drawFN = (time: number, ctx:CanvasRenderingContext2D, canvas: HTMLCanvasElement, data: interactiveData)=> {
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
+  
+  if(sample.length > 0){
+    for(let i = 0; i < sample.length; i++){
+      sample[i].draw(time / 500, data)
+    }
   }
 }
 
 
-function getSelectedPixels(image: HTMLImageElement, canvas: HTMLCanvasElement, density:number = controls.density){
-    const selectedPixels: Pixel[] = []
-    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
-    ctx.drawImage(image, 0, 0);
-    const data = ctx.getImageData(0, 0, image.width, image.height)
-    const pixels:Pixel[] = []
 
-    // Convert points array to pixels array
-    for(let i=0; i< data.data.length; i+=4){
-      const pixelIndex = i / 4
-      const x = pixelIndex + 1 - (floor(pixelIndex/data.width) * data.width)
-      const y = floor(pixelIndex/data.width) + 1
-      const r = data.data[i]
-      const g = data.data[i + 1]
-      const b = data.data[i + 2]
-      const a = data.data[i + 3]
-      pixels.push(
-        new Pixel(
-          x, 
-          y,
-          r,
-          g,
-          b,
-          a
+
+const setup = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+  getImageData(ctx,canvas, URL, (imageData: ImageData) => {
+    const pds = new PoissonDiskSampling({
+      shape: [imageData.width, imageData.height],
+      minDistance: controls.MIN_DIST,
+      maxDistance: 55,
+      tries: 10,
+      distanceFunction: function (point) {
+        // get the index of the red pixel value for the given coordinates (point)
+        var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4;
+        var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 1;
+        var Bindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 2;
+        const color = new Color(
+          imageData.data[Rindex],
+          imageData.data[Gindex],
+          imageData.data[Bindex]
         )
-      )
-    }
-    
-    ctx.clearRect(0, 0 , canvas.width, canvas.height)
-    let index = 0
-    while (index < pixels.length){
-      const particle = pixels[index]
-
-      if(particle.getHSB()[2] < 75){
-        selectedPixels.push(particle)
+        // map the value to 0-1 and apply Math.pow for flavor
+        return Math.pow(color.getGrayScale() / controls.DENSITY, 2.7);
       }
-      index += getRandomInt(1, density)
-    } 
-    return selectedPixels
-}
+    });
+    const points = pds.fill()
+    const selectedPixesl: Particle[] = []
 
-const drawParticles = (
-  pixels: Pixel[], 
-  ctx: CanvasRenderingContext2D,
-  color: "original" | "black" | "invert" = "original",
-  size: number = 1
-) => {
-  ctx.clearRect(0, 0 , window.innerWidth, window.innerHeight)
-  for(let i = 0; i< pixels.length; i++){
-    const particle = pixels[i]
-    if(color === "original"){
-      ctx.fillStyle = `rgb(${particle.r}, ${particle.g}, ${particle.b})`
+
+    for(let i =0; i < points.length; i++){
+      const point = points[i]
+      var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4;
+      var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 1;
+      var Bindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 2;
+      var Aindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 3;
+      const pixel = new Pixel(
+        point[0],
+        point[1],
+        imageData.data[Rindex],
+        imageData.data[Gindex],
+        imageData.data[Bindex],
+        imageData.data[Aindex]
+      )
+      const particle = new Particle(
+        controls.SIZE,
+        pixel,
+        controls.COLOR,
+        ctx,
+      ) 
+      selectedPixesl.push(particle)
     }
-    if(color === "black"){
-      ctx.fillStyle = `black`
-    }
-
-    if(color === "invert"){
-      ctx.fillStyle = `rgb(${255 - particle.r}, ${255 - particle.g}, ${255 - particle.b})`
-    }
-    
-    ctx.fillRect( particle.x, particle.y, size, size)
-  }
-} 
-
-
-function setup(canvas: HTMLCanvasElement) {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+    sample = selectedPixesl
+  })
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const image = new Image();
-  const canvas= document.getElementById("scene") as HTMLCanvasElement | null
-
-  if(canvas ){
-    setup(canvas)
-    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
-    let selectedPixels: Pixel[]
-    image.onload = () => {
-      selectedPixels = getSelectedPixels(image, canvas)
-      drawParticles(selectedPixels, ctx, controls.color)
+  const app = new App("app", drawFN, true)
+  const uploadBTN = document.querySelector<HTMLInputElement>("#imagePicker")
+  if(uploadBTN){
+    uploadBTN.onchange = function(e){
+      e.preventDefault()
+      //@ts-ignore
+      const file = e.target.files[0]
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function (event) {
+            // @ts-ignore
+            URL= event.target.result;
+            app.call(setup)
+        };
+        reader.readAsDataURL(file);
     }
-    image.src = imageURL
-
-    const gui = new dat.GUI()
-    gui.add(controls, "density", 1 , 20, 1).listen().onChange( () => {
-      selectedPixels = getSelectedPixels(image, canvas, controls.density)
-      drawParticles(selectedPixels, ctx, controls.color, controls.size)
-    })
-    gui.add(controls, "color", ["black", "invert", "original"]).listen().onChange( () => {
-      drawParticles(selectedPixels, ctx, controls.color, controls.size)
-    })
-    gui.add(controls, "size", 1,10, 1).listen().onChange( () => {
-      drawParticles(selectedPixels, ctx, controls.color, controls.size)
-    })
+    }
   }
+  appState.subscribe(() => app.call(setup))
+  app.start(setup)
 })
+

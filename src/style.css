@@ -2,12 +2,12 @@
   box-sizing: border-box;
 }
 
-body,
-html {
+html,
+body {
   margin: 0;
   padding: 0;
 }
 
-#scene {
+canvas {
   display: block;
 }
