@@ -19,83 +19,6 @@ let URL = imageURL
 const appState = new State()
 let controls = appState.state
 
-// const DIMENSIONS = 2
-// const MIN_DIST = 15
-// const CELL_SIZE = MIN_DIST / Math.sqrt(DIMENSIONS)
-// const TRY_LIMITS = 20
-// const COLSCOUNT = Math.floor(window.innerWidth / CELL_SIZE)
-// const ROWSCOUNT = Math.floor(window.innerHeight / CELL_SIZE)
-// // STEP 1
-// const  grid= new Grid<Vector2 | null>(COLSCOUNT, ROWSCOUNT)
-// const active: Vector2[] = []
-
-
-// const generateRandomPoint = (colWidth: number, rowWidth: number) => {
-//   return new Vector2(
-//     generateRandomInt(0, colWidth) * MIN_DIST,
-//     generateRandomInt(0, rowWidth) * MIN_DIST
-//   )
-// }
-
-
-
-  // // STEP 2
-  // const startPoint = generateRandomPoint(COLSCOUNT, ROWSCOUNT)
-  // active.push(startPoint)
-
-  // while (active.length > 0){
-  //   const activeIndex = generateRandomInt(0, active.length -1)
-  //   const point = active[activeIndex]
-  //   let found = false
-
-  //   for(let n = 0; n < TRY_LIMITS; n++){
-  //     const newPoint = new Vector2(point.x, point.y)
-  //     newPoint.setAngle(generateRandomNumber(0, 2 * Math.PI))
-  //     newPoint.setLength(generateRandomNumber(20, 40))
-  //     newPoint.add(point)
-
-  //     const newPointCol = Math.floor(newPoint.x / CELL_SIZE)
-  //     const newPointRow = Math.floor(newPoint.y / CELL_SIZE)
-  //     if(newPointCol > 0 && newPointRow > 0 && newPointCol < COLSCOUNT && newPointRow < ROWSCOUNT && !grid.get(newPointCol, newPointRow)){
-  //       let ok = true
-  //       for(let i = -1; i<=1; i++){
-  //         for(let j = -1; j<=1; j++){
-  //           const neighbor = grid.get(newPointCol + i, newPointRow + j)
-  //           if(neighbor){
-  //             if(dist(neighbor, newPoint) < MIN_DIST){
-  //               ok  = false
-  //             }
-  //           }
-  //         }
-  //       }
-  //       if(ok){
-  //         found = true
-  //         grid.insert(newPointCol, newPointRow, newPoint)
-  //         active.push(newPoint)
-  //       }
-  //     }
-  //   }
-
-  //   if(!found){
-  //     active.splice(activeIndex, 1)
-  //   }
-  // }
-
-
-
-    // for(let i =0; i < grid.array.length; i++){
-  //   const point = grid.array[i]
-  //   if(point){
-  //     ctx.beginPath()
-  //     ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-
-  //     // ctx.fillStyle = `RGB(${generateRandomInt(0, 255)}, ${generateRandomInt(0, 255)}, ${generateRandomInt(0, 255)})`
-  //     ctx.fill()
-  //   }
-  // }
-
-
-
 
   function getImageData(ctx:CanvasRenderingContext2D ,canvas:HTMLCanvasElement  ,url: string, callback: (data: ImageData) => void) {
     // load an image, draw it on a canvas, retrieve the pixel values / image data
@@ -121,7 +44,7 @@ const drawFN = (time: number, ctx:CanvasRenderingContext2D, canvas: HTMLCanvasEl
   
   if(sample.length > 0){
     for(let i = 0; i < sample.length; i++){
-      sample[i].draw(time / 500, data)
+      sample[i].draw(time / 500, data, controls.INTERACTION, controls.UNEASY, controls.UNEAZYRANGE)
     }
   }
 }
@@ -173,6 +96,10 @@ const setup = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
         pixel,
         controls.COLOR,
         ctx,
+        new Vector2(0,0),
+        new Vector2(0,0),
+        controls.DEFORMITY_X,
+        controls.DEFORMITY_Y,
       ) 
       selectedPixesl.push(particle)
     }
