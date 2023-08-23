@@ -11,3 +11,11 @@ body {
 canvas {
   display: block;
 }
+
+#imagePicker {
+  position: fixed;
+  bottom: 10px;
+  font-size: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+}

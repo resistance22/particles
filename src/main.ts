@@ -3,18 +3,18 @@ import { App } from "./Classes/App"
 import { Color } from "./Classes/Color";
 import { Pixel } from "./Classes/Pixel";
 import PoissonDiskSampling from "poisson-disk-sampling"
-import  imageURL from  "/sad.png"
+// import  imageURL from  "/sad.png"
 import "./style.css"
 import { Particle } from "./Classes/Shapes/Particle";
 import { State } from "./Classes/Controls";
 import { Vector2 } from "./Classes/Vector2";
 
 
-interface HTMLInputEvent extends Event {
-  target: HTMLInputElement & EventTarget;
-}
+// interface HTMLInputEvent extends Event {
+//   target: HTMLInputElement & EventTarget;
+// }
 
-let URL = imageURL
+let URL: string | null = null
 
 const appState = new State()
 let controls = appState.state
@@ -39,7 +39,7 @@ let sample:Particle[] = []
 
 
 
-const drawFN = (time: number, ctx:CanvasRenderingContext2D, canvas: HTMLCanvasElement, data: interactiveData)=> {
+const drawFN = (time: number, ctx:CanvasRenderingContext2D, _canvas: HTMLCanvasElement, data: interactiveData)=> {
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
   
   if(sample.length > 0){
@@ -53,58 +53,60 @@ const drawFN = (time: number, ctx:CanvasRenderingContext2D, canvas: HTMLCanvasEl
 
 
 const setup = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-  getImageData(ctx,canvas, URL, (imageData: ImageData) => {
-    const pds = new PoissonDiskSampling({
-      shape: [imageData.width, imageData.height],
-      minDistance: controls.MIN_DIST,
-      maxDistance: 55,
-      tries: 10,
-      distanceFunction: function (point) {
-        // get the index of the red pixel value for the given coordinates (point)
+  if(URL){
+    getImageData(ctx,canvas, URL, (imageData: ImageData) => {
+      const pds = new PoissonDiskSampling({
+        shape: [imageData.width, imageData.height],
+        minDistance: controls.MIN_DIST,
+        maxDistance: 55,
+        tries: 10,
+        distanceFunction: function (point) {
+          // get the index of the red pixel value for the given coordinates (point)
+          var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4;
+          var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 1;
+          var Bindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 2;
+          const color = new Color(
+            imageData.data[Rindex],
+            imageData.data[Gindex],
+            imageData.data[Bindex]
+          )
+          // map the value to 0-1 and apply Math.pow for flavor
+          return Math.pow(color.getGrayScale() / controls.DENSITY, 2.7);
+        }
+      });
+      const points = pds.fill()
+      const selectedPixesl: Particle[] = []
+
+
+      for(let i =0; i < points.length; i++){
+        const point = points[i]
         var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4;
         var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 1;
         var Bindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 2;
-        const color = new Color(
+        var Aindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 3;
+        const pixel = new Pixel(
+          point[0],
+          point[1],
           imageData.data[Rindex],
           imageData.data[Gindex],
-          imageData.data[Bindex]
+          imageData.data[Bindex],
+          imageData.data[Aindex]
         )
-        // map the value to 0-1 and apply Math.pow for flavor
-        return Math.pow(color.getGrayScale() / controls.DENSITY, 2.7);
+        const particle = new Particle(
+          controls.SIZE,
+          pixel,
+          controls.COLOR,
+          ctx,
+          new Vector2(0,0),
+          new Vector2(0,0),
+          controls.DEFORMITY_X,
+          controls.DEFORMITY_Y,
+        ) 
+        selectedPixesl.push(particle)
       }
-    });
-    const points = pds.fill()
-    const selectedPixesl: Particle[] = []
-
-
-    for(let i =0; i < points.length; i++){
-      const point = points[i]
-      var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4;
-      var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 1;
-      var Bindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 2;
-      var Aindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 3;
-      const pixel = new Pixel(
-        point[0],
-        point[1],
-        imageData.data[Rindex],
-        imageData.data[Gindex],
-        imageData.data[Bindex],
-        imageData.data[Aindex]
-      )
-      const particle = new Particle(
-        controls.SIZE,
-        pixel,
-        controls.COLOR,
-        ctx,
-        new Vector2(0,0),
-        new Vector2(0,0),
-        controls.DEFORMITY_X,
-        controls.DEFORMITY_Y,
-      ) 
-      selectedPixesl.push(particle)
-    }
-    sample = selectedPixesl
-  })
+      sample = selectedPixesl
+    })
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {

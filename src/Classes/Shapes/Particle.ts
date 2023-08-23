@@ -1,5 +1,4 @@
 import { Vector2 } from '../Vector2'
-import { Shape } from './Shape'
 import { generateRandomNumber, generateRandomSign } from '../../utils/index'
 import { Pixel } from '../Pixel'
 import { COLORS } from '../../types'
