@@ -29,8 +29,8 @@ export class App{
     this.canvas.width = window.innerWidth
     this.canvas.height = window.innerHeight
     this.canvas.addEventListener('mousemove', (e) => {
-      this.mouseX = e.clientX
-      this.mouseY = e.clientY
+      this.mouseX = e.offsetX
+      this.mouseY = e.offsetY
     })
     const context = this.canvas.getContext("2d")
     if(!context){

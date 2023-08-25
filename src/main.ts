@@ -25,6 +25,13 @@ let controls = appState.state
     // see https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Pixel_manipulation_with_canvas
     const img = new Image();
     img.onload = function () {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+      if(canvas.height < img.height){
+        const scale = img.width / img.height
+        img.height = canvas.height
+        img.width = canvas.height * scale
+      }
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
@@ -41,7 +48,8 @@ let sample:Particle[] = []
 
 const drawFN = (time: number, ctx:CanvasRenderingContext2D, _canvas: HTMLCanvasElement, data: interactiveData)=> {
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
-  
+  ctx.fillStyle = controls.BG_COLOR
+  ctx.fillRect(0, 0, _canvas.width, _canvas.height)
   if(sample.length > 0){
     for(let i = 0; i < sample.length; i++){
       sample[i].draw(time / 500, data, controls.INTERACTION, controls.UNEASY, controls.UNEAZYRANGE)
@@ -99,8 +107,8 @@ const setup = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
           ctx,
           new Vector2(0,0),
           new Vector2(0,0),
-          controls.DEFORMITY_X,
-          controls.DEFORMITY_Y,
+          controls.MOVE_HORIZENTAL,
+          controls.MOVE_VERTICAL,
         ) 
         selectedPixesl.push(particle)
       }
