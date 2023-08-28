@@ -1,1 +1,1 @@
-export type COLORS = "original" | "black" | "invert" | "grayscale"
+export type COLORS = "original" | "black" | "invert" | "grayscale" | "custom"

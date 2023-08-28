@@ -2,22 +2,18 @@ import type { interactiveData } from "./Classes/App"
 import { App } from "./Classes/App"
 import { Color } from "./Classes/Color";
 import { Pixel } from "./Classes/Pixel";
-import PoissonDiskSampling from "poisson-disk-sampling"
-// import  imageURL from  "/sad.png"
-import "./style.css"
 import { Particle } from "./Classes/Shapes/Particle";
 import { State } from "./Classes/Controls";
 import { Vector2 } from "./Classes/Vector2";
+// @ts-ignore
+import PoissonDiskSampling from "poisson-disk-sampling"
+import "./style.css"
 
-
-// interface HTMLInputEvent extends Event {
-//   target: HTMLInputElement & EventTarget;
-// }
 
 let URL: string | null = null
 
 const appState = new State()
-let controls = appState.state
+let controls = appState.subscribableStates
 
 
   function getImageData(ctx:CanvasRenderingContext2D ,canvas:HTMLCanvasElement  ,url: string, callback: (data: ImageData) => void) {
@@ -27,15 +23,12 @@ let controls = appState.state
     img.onload = function () {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
-      if(canvas.height < img.height){
-        const scale = img.width / img.height
-        img.height = canvas.height
-        img.width = canvas.height * scale
-      }
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      callback(ctx.getImageData(0, 0, img.width, img.height));
+      const scale = img.width / img.height
+      const height = canvas.height
+      const width  = canvas.height * scale
+      ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, width, height)
+
+      callback(ctx.getImageData(0, 0, width - 10, height - 10))
     }
     img.src = url
     ctx.clearRect(0,0,canvas.width, canvas.height)
@@ -68,7 +61,7 @@ const setup = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
         minDistance: controls.MIN_DIST,
         maxDistance: 55,
         tries: 10,
-        distanceFunction: function (point) {
+        distanceFunction: function (point: any) {
           // get the index of the red pixel value for the given coordinates (point)
           var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4;
           var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imageData.width) * 4) + 1;
@@ -104,6 +97,7 @@ const setup = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
           controls.SIZE,
           pixel,
           controls.COLOR,
+          controls.DOT_COLOR,
           ctx,
           new Vector2(0,0),
           new Vector2(0,0),
@@ -136,7 +130,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     }
   }
-  appState.subscribe(() => app.call(setup))
+  appState.subscribe(() => app.call(setup), ["MIN_DIST", "DOT_COLOR", "BG_COLOR", "COLOR", "DENSITY", "INTERACTION", "SIZE", "UNEASY", "UNEAZYRANGE"])
+  appState.subscribe(() => {
+    if(sample.length > 0){
+      for(let i = 0; i < sample.length; i++){
+        sample[i].setDeformityX(controls.MOVE_HORIZENTAL)
+      }
+    }
+  }, ["MOVE_HORIZENTAL"])
+  appState.subscribe(() => {
+    if(sample.length > 0){
+      for(let i = 0; i < sample.length; i++){
+        sample[i].setDeformityY(controls.MOVE_VERTICAL)
+      }
+    }
+  }, ["MOVE_VERTICAL"])
   app.start(setup)
 })
 

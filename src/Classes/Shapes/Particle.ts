@@ -9,18 +9,23 @@ export class Particle {
   private phaseShift: number = generateRandomNumber(0, 2 * Math.PI)
   private friction: number = 0.97
   public pos: Vector2
+  private deformity_x: number
+  private deformity_y: number
   constructor(
     private radius: number,
     private pixel :Pixel,
     private colorType: COLORS = "black",
+    private color: string,
     protected ctx: CanvasRenderingContext2D,
     public acceleration: Vector2 = new Vector2(0, 0),
     public speed: Vector2 = new Vector2(0, 0),
-    private deformity_X: number = 0,
-    private deformity_Y: number = 0
+    deformity_X: number = 0,
+    deformity_Y: number = 0
   ){
-    this.pixel.x = this.pixel.x + (generateRandomSign() * generateRandomInt(0, this.deformity_X))
-    this.pixel.y = this.pixel.y + (generateRandomSign() * generateRandomInt(0, this.deformity_Y))
+    this.deformity_x = (generateRandomSign() * generateRandomInt(0, deformity_X))
+    this.deformity_y = (generateRandomSign() * generateRandomInt(0, deformity_Y))
+    this.pixel.x = this.pixel.x 
+    this.pixel.y = this.pixel.y
     this.pos = new Vector2(this.pixel.x, this.pixel.y)
   }
 
@@ -38,6 +43,9 @@ export class Particle {
     if(this.colorType === "grayscale"){
       const grayScale = this.pixel.getGrayScale()
       return `rgb(${grayScale}, ${grayScale}, ${grayScale})`
+    }
+    if(this.colorType === 'custom'){
+      return this.color
     }
     return 'black'
   }
@@ -80,16 +88,16 @@ export class Particle {
     this.ctx.fillStyle = this.generateColor()
     if(uneasey){
       this.ctx.arc(
-        this.pos.x  + Math.sin(time + this.phaseShift) * viggleRoom, 
-        this.pos.y + Math.cos(time + this.phaseShift) * viggleRoom, 
+        this.pos.x +  this.deformity_x  + Math.sin(time + this.phaseShift) * viggleRoom, 
+        this.pos.y +  this.deformity_y +Math.cos(time + this.phaseShift) * viggleRoom, 
         this.radius,
         0,
         Math.PI * 2
       )
     }else{
       this.ctx.arc(
-        this.pos.x, 
-        this.pos.y, 
+        this.pos.x + this.deformity_x, 
+        this.pos.y + this.deformity_y, 
         this.radius, 
         0, 
         Math.PI * 2
@@ -97,5 +105,12 @@ export class Particle {
     }
     this.ctx.fill()
     this.ctx.restore()
+  }
+
+  setDeformityX(amount: number){
+    this.deformity_x = (generateRandomSign() * generateRandomInt(0, amount))
+  }
+  setDeformityY(amount: number){
+    this.deformity_y = (generateRandomSign() * generateRandomInt(0, amount))
   }
 }
