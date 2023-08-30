@@ -15,10 +15,6 @@ let URL: string | null = null
 const appState = new State()
 let controls = appState.subscribableStates
 
-let exportImage = (_app: App) => {
-  alert("No Image!")
-}
-
 
 function getImageData(ctx:CanvasRenderingContext2D ,canvas:HTMLCanvasElement  ,url: string, callback: (data: ImageData) => void) {
     // load an image, draw it on a canvas, retrieve the pixel values / image data
