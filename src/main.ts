@@ -15,8 +15,12 @@ let URL: string | null = null
 const appState = new State()
 let controls = appState.subscribableStates
 
+let exportImage = (_app: App) => {
+  alert("No Image!")
+}
 
-  function getImageData(ctx:CanvasRenderingContext2D ,canvas:HTMLCanvasElement  ,url: string, callback: (data: ImageData) => void) {
+
+function getImageData(ctx:CanvasRenderingContext2D ,canvas:HTMLCanvasElement  ,url: string, callback: (data: ImageData) => void) {
     // load an image, draw it on a canvas, retrieve the pixel values / image data
     // see https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Pixel_manipulation_with_canvas
     const img = new Image();
@@ -24,11 +28,30 @@ let controls = appState.subscribableStates
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
       const scale = img.width / img.height
+      if(img.height < canvas.height){
+        canvas.height = img.height
+      }
+      
       const height = canvas.height
       const width  = canvas.height * scale
-      ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, width, height)
+      canvas.width = width
+      ctx.drawImage(
+        img, 
+        0,
+        0, 
+        img.width, 
+        img.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      )
+      const imageData = ctx.getImageData(0, 0, width - 2, height - 2)
+      appState.setIMG(img)
 
-      callback(ctx.getImageData(0, 0, width - 10, height - 10))
+
+
+      callback(imageData)
     }
     img.src = url
     ctx.clearRect(0,0,canvas.width, canvas.height)

@@ -1,7 +1,13 @@
 import { COLORS } from "../types"
 // @ts-ignore
 import dat from 'dat.gui'
-import { changeDpiDataUrl } from '../dpi'
+import { App } from "./App"
+// @ts-ignore
+import * as PoissonDiskSampling from "poisson-disk-sampling"
+import { Color } from "./Color"
+import { Particle } from "./Shapes/Particle"
+import { Pixel } from "./Pixel"
+import { Vector2 } from "./Vector2"
 
 type notifyFN<T> = (state: T) => void
 
@@ -30,21 +36,110 @@ export class State {
         button.click()
       }
     },
-    exportToJPG : function() { 
-      const canvas = document.querySelector("canvas")
-      if(canvas){
-        const canvasUrl = canvas.toDataURL('image/jpeg', 1)
-        const createEl = document.createElement('a')
-        createEl.href = canvasUrl;
-        createEl.download = "download-this-canvas"
-        createEl.click()
-        createEl.remove()
+    exportToJPG : (_app: App) => {
+      if(!this.img){
+        alert("No Image!")
+        return
       }
+      const dpi = prompt("Enter DPI?")
+      const width = prompt("Enter Print Width?")
+      const height = prompt("Enter Print height?")
+      if(dpi && width && height){
+        const PaperWidth = parseInt(width)  * parseInt(dpi) / 2.54 
+        const paperHeight = parseInt(height) * parseInt(dpi) /2.54
+
+        const exportCanvas = document.createElement("canvas")
+        exportCanvas.width = PaperWidth
+        exportCanvas.height = paperHeight
+        const ctx = exportCanvas.getContext("2d")
+        if(!ctx) return
+
+        ctx.drawImage(
+          this.img, 
+          0,
+          0, 
+          this.img.width, 
+          this.img.height,
+          0,
+          0,
+          exportCanvas.width,
+          exportCanvas.height
+        )
+
+        const imgeData =  ctx.getImageData(0, 0, exportCanvas.width, exportCanvas.height)
+
+        const pds = new PoissonDiskSampling({
+          shape: [imgeData.width, imgeData.height],
+          minDistance: this.subscribableStates.MIN_DIST,
+          maxDistance: 55,
+          tries: 10,
+          distanceFunction: (point: any) => {
+            // get the index of the red pixel value for the given coordinates (point)
+            var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imgeData.width) * 4;
+            var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imgeData.width) * 4) + 1;
+            var Bindex = ((Math.round(point[0]) + Math.round(point[1]) * imgeData.width) * 4) + 2;
+            const color = new Color(
+              imgeData.data[Rindex],
+              imgeData.data[Gindex],
+              imgeData.data[Bindex]
+            )
+            // map the value to 0-1 and apply Math.pow for flavor
+            return Math.pow(color.getGrayScale() / this.subscribableStates.DENSITY, 2.7);
+          }
+        });
+        const points = pds.fill()
+        const selectedPixesl: Particle[] = []
+    
+    
+        for(let i =0; i < points.length; i++){
+          const point = points[i]
+          var Rindex = (Math.round(point[0]) + Math.round(point[1]) * imgeData.width) * 4;
+          var Gindex = ((Math.round(point[0]) + Math.round(point[1]) * imgeData.width) * 4) + 1;
+          var Bindex = ((Math.round(point[0]) + Math.round(point[1]) * imgeData.width) * 4) + 2;
+          var Aindex = ((Math.round(point[0]) + Math.round(point[1]) * imgeData.width) * 4) + 3;
+          const pixel = new Pixel(
+            point[0],
+            point[1],
+            imgeData.data[Rindex],
+            imgeData.data[Gindex],
+            imgeData.data[Bindex],
+            imgeData.data[Aindex]
+          )
+          const particle = new Particle(
+            this.subscribableStates.SIZE,
+            pixel,
+            this.subscribableStates.COLOR,
+            this.subscribableStates.DOT_COLOR,
+            ctx,
+            new Vector2(0,0),
+            new Vector2(0,0),
+            this.subscribableStates.MOVE_HORIZENTAL,
+            this.subscribableStates.MOVE_VERTICAL,
+          ) 
+          selectedPixesl.push(particle)
+        }
+        
+
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
+        ctx.fillStyle = this.subscribableStates.BG_COLOR
+        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height)
+        if(selectedPixesl.length > 0){
+          for(let i = 0; i < selectedPixesl.length; i++){
+            selectedPixesl[i].draw(0, {mouseX: 0, mouseY:0}, false, false)
+          }
+        }
+        const link = document.createElement("a")
+        link.download = "download"
+        const url = exportCanvas.toDataURL('image/png')
+        link.href = url
+        link.click()
+      }
+
     },
   }
   gui = new dat.GUI()
   private subscribers:Subscribers<State["subscribableStates"]>  = Object.keys(this.subscribableStates).reduce((acc, key) => ({...acc, [key]: []}), {}) as Subscribers<State["subscribableStates"]>
-
+  private img: HTMLImageElement | null = null
   constructor(){
     this.gui.add(this.FnStates, 'loadFile').name('Upload Your Image')
     this.gui.add(this.subscribableStates, "COLOR", ["black", "invert", "original", "grayscale", "custom"]).onChange(() => this.notify("COLOR")).name("Dot Color")
@@ -75,5 +170,10 @@ export class State {
       for(let j = 0; j < functions.length; j++){
         functions[j](this.subscribableStates)
       }
+  }
+
+
+  setIMG(img: HTMLImageElement){
+    this.img = img
   }
 }

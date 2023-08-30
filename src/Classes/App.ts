@@ -4,7 +4,7 @@ export type interactiveData = {
 }
 
 type drawFNType = (time: number,context: CanvasRenderingContext2D, canvas: HTMLCanvasElement,data:interactiveData )=>void
-type initFNType = (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement)=>void
+type initFNType = (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, app: App)=>void
 export class App{
   public canvas: HTMLCanvasElement
   public container: HTMLElement
@@ -71,7 +71,7 @@ export class App{
   ) => {
     this.canvas.setAttribute("id", "scene")
     this.container.appendChild(this.canvas)
-    initiFN(this.context, this.canvas)
+    initiFN(this.context, this.canvas, this)
     if(this.loopRunning){
       this.startLoop()
     }
@@ -80,6 +80,7 @@ export class App{
   call = (
     FN: initFNType
   ) => {
-    FN(this.context, this.canvas)
+    FN(this.context, this.canvas, this)
   }
+
 }
