@@ -42,8 +42,8 @@ export class State {
         return
       }
       const dpi = prompt("Enter DPI?")
-      const width = prompt("Enter Print Width?")
-      const height = prompt("Enter Print height?")
+      const width = prompt("Enter Print Width(CM)?")
+      const height = prompt("Enter Print height(CM)?")
       if(dpi && width && height){
         const PaperWidth = parseInt(width)  * parseInt(dpi) / 2.54 
         const paperHeight = parseInt(height) * parseInt(dpi) /2.54
