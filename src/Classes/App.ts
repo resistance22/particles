@@ -4,6 +4,8 @@
 // }
 
 import { AppState } from '../main'
+import { ALGORITHM } from '../types'
+import { generateRandomInt } from '../utils/generateRandomInt'
 import { Color } from './Color'
 import { JPEGExportStrategy, PNGExportStrategy, SVGExportStrategy } from './Export/index'
 import { Pixel } from './Pixel'
@@ -125,7 +127,7 @@ const colorModeFactory = (state: AppState) => {
 
 class IMGUtils {
     private constructor(){}
-    static drawImg(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, url: string, callback: () => void){
+    static drawImg(ctx: CanvasRenderingContext2D, url: string, callback: () => void){
         const img = new Image()
         img.src = url
         img.onload = function () {
@@ -141,8 +143,8 @@ class IMGUtils {
                 img.width = img.height * scale 
             }
 
-            canvas.width = img.width
-            canvas.height = img.height
+            ctx.canvas.width = img.width
+            ctx.canvas.height = img.height
 
             ctx.drawImage(
                 img, 
@@ -155,10 +157,22 @@ class IMGUtils {
         }
     }
 
-    static converImageDataToParticles(imageData:ImageData, state: AppState){
+    static drawText(ctx: CanvasRenderingContext2D, text: string, callback: () => void){
+        ctx.font = 'bold 200px serif'
+        ctx.textBaseline='top'
+        ctx.fillStyle = 'white'
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+        ctx.fillStyle = 'black'
+        const textMeasure = ctx.measureText(text)
+        const fontH =  textMeasure.fontBoundingBoxAscent + textMeasure.fontBoundingBoxDescent
+        ctx.fillText(text, (ctx.canvas.width  - textMeasure.width) / 2 , (ctx.canvas.height - fontH) / 2)
+        callback()
+    }
+    
+    static PoissonAlgorithm(imageData:ImageData, state: AppState){
         const pds = new PoissonDiskSampling({
             shape: [imageData.width, imageData.height],
-            minDistance: state['DENSITY'],
+            minDistance: state.DENSITY,
             maxDistance: 55,
             tries: 10,
             distanceFunction: function (point: any) {
@@ -207,7 +221,97 @@ class IMGUtils {
 
         return particles
     }
+
+    static gridAlgorithm(imageData: ImageData, _state: AppState){
+        const particles: Particle[] = []
+
+        const colors = [new Color(
+            70,
+            137,
+            102,
+            0
+        ),new Color(
+            255,
+            240,
+            165,
+            0
+        ),
+        new Color(
+            255,
+            176,
+            59,
+            0
+        ),
+        new Color(
+            182,
+            73,
+            38,
+            0
+        )]
+        
+
+
+        for(let i=0;i<imageData.width;i+=10){
+            for(let j=0;j<imageData.height;j+=10){
+                if(imageData.data[ ((i + j*imageData.width)*4)] < 20){
+                    const color = colors[generateRandomInt(0,3)]
+                    const pixel = new Pixel(
+                        i,
+                        j,
+                        color
+                    )
+                    const particle = new Particle(
+                        generateRandomInt(2, 5),
+                        pixel,
+                    ) 
+                    particles.push(particle)
+                }
+            }
+        }
+        return particles
+    }
+
+    static randomAlgorithm(imageData: ImageData, state: AppState){
+        const particles = []
+        for(let i =0; i < imageData.data.length; i += generateRandomInt(1, state.DENSITY)){
+            const x = (i / 4) % imageData.width
+            const y = Math.floor((i / 4) / imageData.width)
+            const Rindex = i
+            const Gindex = (i) + 1
+            const Bindex = (i) + 2
+            const Aindex = (i) + 3
+            const color = new Color(
+                imageData.data[Rindex],
+                imageData.data[Gindex],
+                imageData.data[Bindex],
+                imageData.data[Aindex]
+            )
+            if(color.r < 10 && color.g < 10 && color.b < 10){
+                const pixel = new Pixel(
+                    x,
+                    y,
+                    color
+                )
+                const particle = new Particle(
+                    state['SIZE'],
+                    pixel,
+                ) 
+                particles.push(particle)
+            }
+        }
+        return particles
+    }
     
+    static constructAlgo(alogrithm: ALGORITHM){
+        switch(alogrithm){
+        case 'random':
+            return IMGUtils.randomAlgorithm
+        case 'grid':
+            return IMGUtils.gridAlgorithm
+        case 'poisson':
+            return IMGUtils.PoissonAlgorithm
+        }
+    }
 }
 
 export class App {
@@ -256,7 +360,8 @@ export class App {
     goToImageUploadedState = (url: string, state:AppState) =>{
         const cb = () => {
             const imageData = this.getImageData()
-            const particles = IMGUtils.converImageDataToParticles(imageData, state)
+            const algorithm = IMGUtils.constructAlgo(state['ALGORITHM'])
+            const particles = algorithm(imageData, state)
             this.state = new ImageUploadedState(
                 this.ctx,
                 this.canvas, 
@@ -270,17 +375,18 @@ export class App {
             this.url = url
         }
 
-        IMGUtils.drawImg(this.ctx, this.canvas, url, cb)
+        IMGUtils.drawText(this.ctx, url, cb)
     }
 
-    setParticleDensity = (state: AppState) => {
+    redraw = (state: AppState) => {
         if(this.url){
             this.clearCanvas()
             const cb = () => {
                 const imageData = this.getImageData()
-                const particles = IMGUtils.converImageDataToParticles(imageData, state)
+                const algorithm = IMGUtils.constructAlgo(state['ALGORITHM'])
+                const particles = algorithm(imageData, state)
                 this.state = new ImageUploadedState(
-                    this.ctx, 
+                    this.ctx,
                     this.canvas, 
                     particles,
                     new JPEGExportStrategy()
@@ -290,8 +396,7 @@ export class App {
                 this.clearCanvas()
                 this.state.draw()
             }
-            
-            IMGUtils.drawImg(this.ctx, this.canvas, this.url, cb)
+            IMGUtils.drawText(this.ctx, this.url, cb)
         }
 
     }

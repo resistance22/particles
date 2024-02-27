@@ -19,3 +19,34 @@ canvas {
 #imagePicker {
   display: none;
 }
+
+#text-input {
+  padding: 10px;
+  font-size: 2rem;
+  z-index: 100;
+  position: relative;
+}
+
+#text-canvas {
+  display: none;
+}
+
+.generator {
+  display: flex;
+  position: fixed;
+  bottom: 10px;
+  z-index: 100;
+  transform: translateX(-50%);
+  width: 50%;
+}
+
+#draw-text {
+  position: relative;
+  z-index: 100;
+  display: inline-block;
+  background-color: green;
+  padding: 15px 25px;
+  cursor: pointer;
+  color: white;
+  border-radius: 15px;
+}

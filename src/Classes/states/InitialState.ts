@@ -6,6 +6,7 @@ export class InitialState extends IAppState {
     draw(): void {
         return
     }
+    
     setParticleRadius(_: number): void {
         return
     }
